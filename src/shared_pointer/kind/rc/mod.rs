@@ -14,6 +14,7 @@ use core::mem::ManuallyDrop;
 use core::ops::Deref;
 use core::ops::DerefMut;
 use core::ptr;
+use crate::WeakPointer;
 
 type UntypedRc = Rc<()>;
 
@@ -28,7 +29,7 @@ pub struct RcK {
 
 impl RcK {
     #[inline(always)]
-    fn new_from_inner<T>(rc: Rc<T>) -> RcK {
+    pub(crate) fn new_from_inner<T>(rc: Rc<T>) -> RcK {
         RcK { inner: ManuallyDrop::new(unsafe { mem::transmute(rc) }) }
     }
 
@@ -62,6 +63,13 @@ impl RcK {
 }
 
 impl SharedPointerKind for RcK {
+    type WeakPtrK = crate::weak_pointer::kind::WeakRcK;
+
+    #[inline(always)]
+    unsafe fn downgrade<T>(other: &Self) -> Self::WeakPtrK {
+        Self::WeakPtrK::new_from_inner(Rc::downgrade(other.as_inner_ref::<T>()))
+    }
+
     #[inline(always)]
     fn new<T>(v: T) -> RcK {
         RcK::new_from_inner(Rc::new(v))
@@ -98,6 +106,16 @@ impl SharedPointerKind for RcK {
     }
 
     #[inline(always)]
+    unsafe fn weak_count<T>(&self) -> usize {
+        Rc::weak_count(self.as_inner_ref::<T>())
+    }
+
+    #[inline(always)]
+    unsafe fn as_ptr<T>(&self) -> *const T {
+        Rc::as_ptr(self.as_inner_ref::<T>())
+    }
+
+    #[inline(always)]
     unsafe fn clone<T>(&self) -> RcK {
         RcK { inner: ManuallyDrop::new(Rc::clone(self.as_inner_ref())) }
     }
@@ -106,6 +124,7 @@ impl SharedPointerKind for RcK {
     unsafe fn drop<T>(&mut self) {
         ptr::drop_in_place::<Rc<T>>(self.as_inner_mut());
     }
+
 }
 
 impl Debug for RcK {

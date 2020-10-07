@@ -14,6 +14,8 @@ use std::mem;
 use std::string::ToString;
 
 assert_impl_all!(SharedPointer<i32, ArcK>: Send, Sync);
+assert_impl_all!(WeakPointer<i32, <ArcK as SharedPointerKind>::WeakPtrK>: Send, Sync);
+
 
 #[test]
 fn test_deref() {
@@ -277,4 +279,13 @@ fn test_display() {
     let ptr: SharedPointer<_, RcK> = SharedPointer::new("hello");
 
     assert_eq!(format!("{}", ptr), "hello");
+}
+
+#[test]
+fn test_downgrade() {
+    let ptr: SharedPointer<_, RcK> = SharedPointer::new(vec!['a', 'b', 'c']);
+    let weak = SharedPointer::downgrade(&ptr);
+    let raw_ptr = SharedPointer::as_ptr(&ptr);
+    let weak_raw_ptr = weak.as_ptr();
+    assert!(ptr::eq(raw_ptr, weak_raw_ptr));
 }

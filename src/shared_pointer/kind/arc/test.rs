@@ -8,10 +8,15 @@ use pretty_assertions::assert_eq;
 use static_assertions::assert_impl_all;
 use std::cell::Cell;
 use std::string::ToString;
+use crate::weak_pointer::kind::WeakArcK;
+use crate::WeakPointerKind;
 
 type PointerKind = ArcK;
+type WeakKind = WeakArcK;
 
 assert_impl_all!(ArcK: Send, Sync);
+assert_impl_all!(WeakArcK: Send, Sync);
+
 
 #[test]
 fn test_from_box_t() {
@@ -173,5 +178,35 @@ fn test_debug() {
 
     unsafe {
         ptr.drop::<i32>();
+    }
+}
+
+
+#[test]
+fn test_downgrade() {
+    let mut ptr = PointerKind::new::<i32>(42);
+    let mut weak = unsafe { PointerKind::downgrade::<i32>(&ptr) };
+
+    assert_eq!(format!("{:?}", weak), "WeakArcK");
+
+    unsafe {
+        ptr.drop::<i32>();
+    }
+}
+
+#[test]
+fn test_weak_count() {
+    let mut ptr = PointerKind::new::<i32>(42);
+    let mut weak = unsafe { PointerKind::downgrade::<i32>(&ptr) };
+
+    unsafe {
+        assert_eq!(ptr.strong_count::<i32>(), weak.strong_count::<i32>());
+        assert_eq!(ptr.strong_count::<i32>(), 1);
+        assert_eq!(weak.strong_count::<i32>(), 1);
+
+        ptr.drop::<i32>();
+
+        assert_eq!(weak.strong_count::<i32>(), 0);
+        assert_eq!(weak.weak_count::<i32>(), 0);
     }
 }

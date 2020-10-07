@@ -14,6 +14,7 @@ use core::mem::ManuallyDrop;
 use core::ops::Deref;
 use core::ops::DerefMut;
 use core::ptr;
+use crate::WeakPointer;
 
 type UntypedArc = Arc<()>;
 
@@ -28,7 +29,7 @@ pub struct ArcK {
 
 impl ArcK {
     #[inline(always)]
-    fn new_from_inner<T>(arc: Arc<T>) -> ArcK {
+    pub(crate) fn new_from_inner<T>(arc: Arc<T>) -> ArcK {
         ArcK { inner: ManuallyDrop::new(unsafe { mem::transmute(arc) }) }
     }
 
@@ -59,9 +60,12 @@ impl ArcK {
 
         &mut *arc_t
     }
+
 }
 
 impl SharedPointerKind for ArcK {
+    type WeakPtrK = crate::weak_pointer::kind::WeakArcK;
+
     #[inline(always)]
     fn new<T>(v: T) -> ArcK {
         ArcK::new_from_inner(Arc::new(v))
@@ -70,6 +74,11 @@ impl SharedPointerKind for ArcK {
     #[inline(always)]
     fn from_box<T>(v: Box<T>) -> ArcK {
         ArcK::new_from_inner::<T>(Arc::from(v))
+    }
+
+    #[inline(always)]
+    unsafe fn downgrade<T>(other: &Self) -> Self::WeakPtrK {
+        Self::WeakPtrK::new_from_inner(Arc::downgrade(other.as_inner_ref::<T>()))
     }
 
     #[inline(always)]
@@ -95,6 +104,16 @@ impl SharedPointerKind for ArcK {
     #[inline(always)]
     unsafe fn strong_count<T>(&self) -> usize {
         Arc::strong_count(self.as_inner_ref::<T>())
+    }
+
+    #[inline(always)]
+    unsafe fn weak_count<T>(&self) -> usize {
+        Arc::weak_count(self.as_inner_ref::<T>())
+    }
+
+    #[inline(always)]
+    unsafe fn as_ptr<T>(&self) -> *const T {
+        Arc::as_ptr(self.as_inner_ref::<T>())
     }
 
     #[inline(always)]

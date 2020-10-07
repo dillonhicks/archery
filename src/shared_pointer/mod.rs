@@ -18,6 +18,7 @@ use core::mem;
 use core::mem::ManuallyDrop;
 use core::ops::Deref;
 use core::ptr;
+use crate::WeakPointer;
 
 /// Pointer to shared data with reference-counting.
 ///
@@ -89,7 +90,7 @@ where
     P: SharedPointerKind,
 {
     #[inline(always)]
-    fn new_from_inner(ptr: P) -> SharedPointer<T, P> {
+    pub(crate) fn new_from_inner(ptr: P) -> SharedPointer<T, P> {
         SharedPointer { ptr: ManuallyDrop::new(ptr), _phantom_t: PhantomData }
     }
 
@@ -118,11 +119,26 @@ where
     }
 
     #[inline(always)]
+    pub fn weak_count(this: &Self) -> usize {
+        unsafe { this.ptr.weak_count::<T>() }
+    }
+
+    #[inline(always)]
     pub fn ptr_eq<PO: SharedPointerKind>(
         this: &SharedPointer<T, P>,
         other: &SharedPointer<T, PO>,
     ) -> bool {
         ptr::eq(this.deref(), other.deref())
+    }
+
+    #[inline(always)]
+    pub fn downgrade(other: &Self) -> WeakPointer<T, <P as SharedPointerKind>::WeakPtrK> {
+        WeakPointer::new_from_inner(unsafe { P::downgrade::<T>(&other.ptr) })
+    }
+
+    #[inline(always)]
+    pub fn as_ptr(other: &Self) -> *const T {
+        unsafe { other.ptr.as_ptr::<T>() }
     }
 }
 

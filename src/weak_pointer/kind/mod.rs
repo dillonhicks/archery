@@ -4,10 +4,10 @@
  */
 
 use core::fmt::Debug;
-use crate::{WeakPointerKind, WeakPointer};
+use crate::shared_pointer::kind::SharedPointerKind;
 
 /// Trait for [type constructors](https://en.wikipedia.org/wiki/Type_constructor) of
-/// reference-counting pointers.
+/// weak reference-counting pointers.
 //
 // There are two conditions for types implementing this trait to be used in a safe way:
 //
@@ -18,20 +18,15 @@ use crate::{WeakPointerKind, WeakPointer};
 // To elaborate on point 2: a `ArcK` will always implement `Send + Sync`, but that
 // is only safe if the actually type that `ArcK` holds is in fact `Send + Sync`.
 // This means that a safe wrapper around this type must make sure it does not implement
-// `Send + Sync` unless `T: Send + Sync`.  This is holds true for `SharedPointer` since it has a
-// phantom field with `T`, thus the compiler will only make `SharedPointer<T>` implement
+// `Send + Sync` unless `T: Send + Sync`.  This is holds true for `WeakPointer` since it has a
+// phantom field with `T`, thus the compiler will only make `WeakPointer<T>` implement
 // `Send + Sync` if `T: Send + Sync`.
-pub trait SharedPointerKind: Sized + Debug {
-    type WeakPtrK: WeakPointerKind<SharedPtr=Self>;
+pub trait WeakPointerKind: Sized + Debug {
+    type SharedPtr: SharedPointerKind<WeakPtrK=Self>;
 
-    fn new<T>(v: T) -> Self;
-    fn from_box<T>(v: Box<T>) -> Self;
-    unsafe fn downgrade<T>(other: &Self) -> Self::WeakPtrK;
-    unsafe fn deref<T>(&self) -> &T;
-    unsafe fn try_unwrap<T>(self) -> Result<T, Self>;
+    fn new<T>() -> Self;
     unsafe fn as_ptr<T>(&self) -> *const T;
-    unsafe fn get_mut<T>(&mut self) -> Option<&mut T>;
-    unsafe fn make_mut<T: Clone>(&mut self) -> &mut T;
+    unsafe fn upgrade<T>(&self) -> Option<Self::SharedPtr>;
     unsafe fn strong_count<T>(&self) -> usize;
     unsafe fn weak_count<T>(&self) -> usize;
     unsafe fn clone<T>(&self) -> Self;
@@ -43,6 +38,6 @@ mod rc;
 
 use alloc::boxed::Box;
 #[doc(inline)]
-pub use arc::ArcK;
+pub use arc::WeakArcK;
 #[doc(inline)]
-pub use rc::RcK;
+pub use rc::WeakRcK;

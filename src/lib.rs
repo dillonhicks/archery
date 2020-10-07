@@ -124,10 +124,19 @@ extern crate std;
 pub mod shared_pointer;
 
 pub use shared_pointer::SharedPointer;
-
 pub use shared_pointer::kind::SharedPointerKind;
+
+pub mod weak_pointer;
+pub use weak_pointer::WeakPointer;
+pub use weak_pointer::kind::WeakPointerKind;
 
 #[doc(no_inline)]
 pub use shared_pointer::kind::ArcK;
 #[doc(no_inline)]
 pub use shared_pointer::kind::RcK;
+
+
+#[doc(no_inline)]
+pub use weak_pointer::kind::WeakArcK;
+#[doc(no_inline)]
+pub use weak_pointer::kind::WeakRcK;
